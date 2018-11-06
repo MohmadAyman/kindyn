@@ -385,7 +385,7 @@ void Robot::update() {
         pose.block(0, 3, 3, 1) += pose.block(0, 0, 3, 3) * com;
         world_to_link_transform[i] = pose.inverse();
         link_to_world_transform[i] = pose;
-        frame_transform[i] = iDynTree::toEigen(model.getFrameTransform(i).asHomogeneousTransform());
+        frame_transform[i] = iDynTree::toEigen(kinDynComp.getRelativeTransform(0,i).asHomogeneousTransform());
     }
     P.setZero(6 * number_of_links, 6 * number_of_links);
     P.block(0, 0, 6, 6).setIdentity(6, 6);
@@ -417,6 +417,11 @@ void Robot::update() {
     W = P * S;
     L = V * W;
     L_t = -L.transpose();
+
+//    ROS_INFO_STREAM("P=" << P.format(fmt));
+//    ROS_INFO_STREAM("S=" << S.format(fmt));
+//    ROS_INFO_STREAM("V=" << V.format(fmt));
+//    ROS_INFO_STREAM("W=" << W.format(fmt));
 
 //    ROS_INFO_STREAM_THROTTLE(5, "Lt " << L_t.transpose().format(fmt));
 //    ROS_INFO_STREAM_THROTTLE(5, "P " << P.transpose().format(fmt));
@@ -612,14 +617,13 @@ void Robot::update_S() {
 }
 
 void Robot::update_P() {
-    static int counter = 0;
     Matrix3d R_pe;
     Vector3d r_OP, r_OG;
     Matrix3d skew;
     for (int k = 1; k < number_of_links; k++) {
         for (int a = 1; a <= k; a++) {
             R_pe = AngleAxisd(q[a - 1], joint_axis[a - 1].topLeftCorner(3, 1));
-            r_OP = link_to_world_transform[a].topLeftCorner(3, 3) * frame_transform[a].topRightCorner(3, 1);
+            r_OP = frame_transform[a].topRightCorner(3, 1);
             r_OG = world_to_link_transform[k].topLeftCorner(3, 3) * link_to_world_transform[k].topRightCorner(3, 1);
             P.block(6 * k, 6 * a, 3, 3) = link_to_link_transform[k * number_of_links + a] * R_pe.transpose();
             Vector3d v = -r_OP + link_to_link_transform[k * number_of_links + a].transpose() * r_OG;
@@ -629,8 +633,43 @@ void Robot::update_P() {
             P.block(6 * k, 6 * a + 3, 3, 3) = -link_to_link_transform[k * number_of_links + a] * skew;
         }
     }
-
-    counter++;
+//    P.setZero(6 * number_of_links, 6 * number_of_links);
+//    P.block(0, 0, 6, 6).setIdentity(6, 6);
+//
+//    Matrix3d R_ka;
+//    Eigen::Matrix<double, 6, 6> Pak;
+//
+//    const iDynTree::Model &model = kinDynComp.model();
+//
+//    static int counter = 0;
+//    for (int k = 1; k < number_of_links; k++) {
+//        Matrix4d transformMatrix_k = world_to_link_transform[k];
+//        Matrix3d R_k0 = transformMatrix_k.block(0, 0, 3, 3);
+//
+//        for (int a = 1; a <= k; a++) {
+//            Matrix4d transformMatrix_a = world_to_link_transform[a];
+//            Matrix3d R_0a = transformMatrix_a.block(0, 0, 3, 3).transpose();
+//            R_ka = R_k0 * R_0a;
+//
+//            Matrix3d R_pe;
+//            Vector3d r_OP, r_OG;
+//            r_OP.setZero();
+//
+//            R_pe = AngleAxisd(q[a - 1], joint_axis[a - 1].block(0, 0, 3, 1));
+//
+//            // Calculate forward position kinematics
+//            Matrix4d pos = iDynTree::toEigen(kinDynComp.getRelativeTransform(0,a).asHomogeneousTransform());
+//            r_OP = pos.topRightCorner(3,1);
+//
+//            r_OG = R_k0 * transformMatrix_k.inverse().block(0, 3, 3, 1);
+//
+//            Pak.block(0, 0, 3, 3) = R_ka * R_pe.transpose();
+//            Pak.block(0, 3, 3, 3) = -R_ka * EigenExtension::SkewSymmetric2(-r_OP + R_ka.transpose() * r_OG);
+//            Pak.block(3, 0, 3, 3) = Matrix3d::Zero(3, 3);
+//            Pak.block(3, 3, 3, 3) = R_ka;
+//            P.block(6 * k, 6 * a, 6, 6) = Pak;
+//        }
+//    }
 }
 
 void Robot::controllerType(const roboy_communication_simulation::ControllerTypeConstPtr &msg) {
@@ -792,7 +831,8 @@ void Robot::JointState(const sensor_msgs::JointStateConstPtr &msg) {
             q(joint_index) = msg->position[i];
             qd(joint_index) = msg->velocity[i];
         } else {
-            ROS_ERROR("joint %s not found in model", joint.c_str());
+            ROS_ERROR_ONCE("receiving external joint state for joint %s which is not found in model."
+                                   "I'm dropping those from now on", joint.c_str());
         }
         i++;
     }

@@ -1,78 +1,58 @@
 #include "kindyn/robot.hpp"
 #include <thread>
 #include <roboy_communication_middleware/MotorCommand.h>
-#include <roboy_communication_middleware/ControlMode.h>
-#include <common_utilities/CommonDefinitions.h>
-#include <roboy_communication_control/SetControllerParameters.h>
-#include <roboy_communication_middleware/MotorConfigService.h>
+#define SPINDLERADIUS 0.0045
+#define FS5103R_MAX_SPEED (2.0*M_PI/0.9) // radian per second
+
+#define FS5103R_FULL_SPEED_BACKWARDS 400.0
+#define FS5103R_STOP 375.0
+#define FS5103R_FULL_SPEED_FORWARDS 350.0
 
 using namespace std;
 
-class RoboyUpperBody: public cardsflow::kindyn::Robot{
+class YATR: public cardsflow::kindyn::Robot{
 public:
     /**
      * Constructor
      * @param urdf path to urdf
      * @param cardsflow_xml path to cardsflow xml
      */
-    RoboyUpperBody(string urdf, string cardsflow_xml){
+    YATR(string urdf, string cardsflow_xml){
         if (!ros::isInitialized()) {
             int argc = 0;
             char **argv = NULL;
-            ros::init(argc, argv, "roboy_upper_body");
+            ros::init(argc, argv, "yatr");
         }
         nh = ros::NodeHandlePtr(new ros::NodeHandle);
         motor_command = nh->advertise<roboy_communication_middleware::MotorCommand>("/roboy/middleware/MotorCommand",1);
-        motor_control_mode = nh->serviceClient<roboy_communication_middleware::ControlMode>("/roboy/shoulder_left/middleware/ControlMode");
-        motor_config = nh->serviceClient<roboy_communication_middleware::MotorConfigService>("/roboy/shoulder_left/middleware/MotorConfig");
-        sphere_left_axis0_params = nh->serviceClient<roboy_communication_control::SetControllerParameters>("/sphere_left_axis0/sphere_left_axis0/params");
-        sphere_left_axis1_params = nh->serviceClient<roboy_communication_control::SetControllerParameters>("/sphere_left_axis1/sphere_left_axis1/params");
-        sphere_left_axis2_params = nh->serviceClient<roboy_communication_control::SetControllerParameters>("/sphere_left_axis2/sphere_left_axis2/params");
+        // first we retrieve the active joint names from the parameter server
         vector<string> joint_names;
         nh->getParam("joint_names", joint_names);
+        // then we initialize the robot with the cardsflow xml and the active joints
         init(urdf,cardsflow_xml,joint_names);
         // if we do not get the robot state externally, we use the forwardKinematics function to integrate the robot state
         nh->getParam("external_robot_state", external_robot_state);
-        roboy_communication_middleware::ControlMode msg;
-        msg.request.control_mode = VELOCITY;
-        msg.request.setPoint = 0;
-        if(!motor_control_mode.call(msg))
-            ROS_WARN("failed to change control mode to velocity");
     };
+
     /**
-     * Updates the robot model and integrates the robot model using the forwardKinematics function
+     * Updates the robot model and if we do not use gazebo for simulation, we integrate using the forwardKinematics function
      * with a small step length
      */
     void read(){
         update();
         if(!external_robot_state)
-            forwardKinematics(0.001);
+            forwardKinematics(0.000001);
     };
+
     /**
      * Sends motor commands to the real robot
      */
     void write(){
-        roboy_communication_middleware::MotorCommand msg;
-        msg.id = SHOULDER_LEFT;
-        msg.motors = left_arm_motors;
-        stringstream str;
-        for (int i = 0; i < left_arm_motors.size(); i++) {
-            double ld_meter = -ld[4][i]-ld[5][i]-ld[6][i];
-            str << ld_meter << "\t";
-            if(ld_meter<0){
-                ld_meter = 0;
-            }
-            msg.setPoints.push_back(myoMuscleEncoderTicksPerMeter(ld_meter)); //
-        }
-        str << endl;
-        ROS_INFO_STREAM_THROTTLE(1,str.str());
-        motor_command.publish(msg);
+
     };
+    bool external_robot_state; /// indicates if we get the robot state externally
     ros::NodeHandlePtr nh; /// ROS nodehandle
     ros::Publisher motor_command; /// motor command publisher
-    ros::ServiceClient motor_control_mode, motor_config, sphere_left_axis0_params, sphere_left_axis1_params, sphere_left_axis2_params;
-    bool external_robot_state; /// indicates if we get the robot state externally
-    vector<short unsigned int> left_arm_motors = {0,1,2,3,4,5,6,7,8};
 };
 
 /**
@@ -108,7 +88,7 @@ int main(int argc, char *argv[]) {
     }
     ROS_INFO("\nurdf file path: %s\ncardsflow_xml %s", urdf.c_str(), cardsflow_xml.c_str());
 
-    RoboyUpperBody robot(urdf, cardsflow_xml);
+    YATR robot(urdf, cardsflow_xml);
 
     controller_manager::ControllerManager cm(&robot);
 

@@ -116,6 +116,10 @@ target_link_libraries(roboy_xylophone ${iDynTree_LIBRARIES} ${catkin_LIBRARIES} 
 # theClaw
 add_executable( theClaw src/robots/theClaw.cpp)
 target_link_libraries(theClaw ${iDynTree_LIBRARIES} ${catkin_LIBRARIES} kindyn)
+
+# yatr
+add_executable( yatr src/robots/yatr.cpp)
+target_link_libraries(yatr ${iDynTree_LIBRARIES} ${catkin_LIBRARIES} kindyn)
 #==============================================================================
 # Installation
 #==============================================================================
