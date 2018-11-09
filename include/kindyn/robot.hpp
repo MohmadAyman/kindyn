@@ -239,12 +239,14 @@ namespace cardsflow {
             VectorXd CG; /// The Coriolis+Gravity term of the robot
             VectorXd q, qd, qdd; /// joint positon, velocity, acceleration
             VectorXd q_target, qd_target, qdd_target; /// joint positon, velocity, acceleration targets
+            VectorXd q_target_prev, qd_target_prev, qdd_target_prev; /// joint positon, velocity, acceleration targets
             VectorXd l, l_target, Ld; /// tendon length and length change
             VectorXd torques; /// joint torques
-            VectorXd cable_forces; /// the cable forces in Newton
+            VectorXd cable_forces, cable_forces_target; /// the cable forces in Newton
+            VectorXd tendon_error_prev;
             vector<VectorXd> ld; /// tendon length changes for each controller
             MatrixXd L, L_t; /// L and -L^T
-
+            Eigen::IOFormat fmt; /// formator for terminal printouts
         private:
             iDynTree::FreeFloatingGeneralizedTorques bias; /// Coriolis+Gravity term
             iDynTree::MatrixDynSize Mass; /// Mass matrix
@@ -252,7 +254,7 @@ namespace cardsflow {
             bool torque_position_controller_active = false, force_position_controller_active = false, cable_length_controller_active = false;
             VectorXd qdd_torque_control, qdd_force_control;
             MatrixXd S, P, V, W; /// matrices of cable model
-            vector<Cable> cables; /// all cables of the robot
+            vector<Cable> cables, cables_target; /// all cables of the robot
             vector <VectorXd> joint_axis; /// joint axis of each joint
             vector <string> link_names, joint_names; /// link and joint names of the robot
             map<string, int> link_index, joint_index; /// link and joint indices of the robot
@@ -268,7 +270,6 @@ namespace cardsflow {
             real_t *H, *g, *A, *lb, *ub, *b, *FOpt; /// quadratic problem variables
             ros::Time last_visualization; /// timestamp for visualization at reasonable intervals
             vector <vector<pair < ViaPointPtr, ViaPointPtr>>> segments; /// cable segments
-            Eigen::IOFormat fmt; /// formator for terminal printouts
             hardware_interface::JointStateInterface joint_state_interface; /// ros control joint state interface
             hardware_interface::EffortJointInterface joint_command_interface; /// ros control joint command interface
             hardware_interface::CardsflowStateInterface cardsflow_state_interface; /// cardsflow state interface

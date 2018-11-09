@@ -5,6 +5,8 @@
 #include <common_utilities/CommonDefinitions.h>
 #include <roboy_communication_control/SetControllerParameters.h>
 #include <roboy_communication_middleware/MotorConfigService.h>
+#include <roboy_communication_middleware/ArmStatus.h>
+#include <std_msgs/Float32.h>
 
 using namespace std;
 
@@ -28,17 +30,26 @@ public:
         sphere_left_axis0_params = nh->serviceClient<roboy_communication_control::SetControllerParameters>("/sphere_left_axis0/sphere_left_axis0/params");
         sphere_left_axis1_params = nh->serviceClient<roboy_communication_control::SetControllerParameters>("/sphere_left_axis1/sphere_left_axis1/params");
         sphere_left_axis2_params = nh->serviceClient<roboy_communication_control::SetControllerParameters>("/sphere_left_axis2/sphere_left_axis2/params");
+        elbow_left = nh->advertise<std_msgs::Float32>("/roboy/middleware/elbow_left/JointAngle",1);
+        wrist_left = nh->advertise<std_msgs::Float32>("/roboy/middleware/wrist_left/JointAngle",1);
+        arm_status = nh->subscribe("/roboy/middleware/ArmStatus",1, &RoboyUpperBody::ArmStatus, this);
         vector<string> joint_names;
         nh->getParam("joint_names", joint_names);
         init(urdf,cardsflow_xml,joint_names);
         // if we do not get the robot state externally, we use the forwardKinematics function to integrate the robot state
         nh->getParam("external_robot_state", external_robot_state);
         roboy_communication_middleware::ControlMode msg;
-        msg.request.control_mode = VELOCITY;
+        msg.request.control_mode = DISPLACEMENT;
         msg.request.setPoint = 0;
         if(!motor_control_mode.call(msg))
             ROS_WARN("failed to change control mode to velocity");
     };
+
+    void ArmStatus(const roboy_communication_middleware::ArmStatusConstPtr &msg){
+        q[7] = msg->elbow_joint_angle*M_PI/180.0;
+        q[8] = msg->wrist_joint_angle*M_PI/180.0;
+    }
+
     /**
      * Updates the robot model and integrates the robot model using the forwardKinematics function
      * with a small step length
@@ -57,19 +68,21 @@ public:
         msg.motors = left_arm_motors;
         stringstream str;
         for (int i = 0; i < left_arm_motors.size(); i++) {
-            double ld_meter = -ld[4][i]-ld[5][i]-ld[6][i];
-            str << ld_meter << "\t";
-            if(ld_meter<0){
-                ld_meter = 0;
-            }
-            msg.setPoints.push_back(myoMuscleEncoderTicksPerMeter(ld_meter)); //
+            msg.setPoints.push_back(cable_forces[i]);
         }
-        str << endl;
-        ROS_INFO_STREAM_THROTTLE(1,str.str());
+        ROS_INFO_STREAM_THROTTLE(1,cable_forces.transpose().format(fmt));
         motor_command.publish(msg);
+
+        std_msgs::Float32 msg2;
+        msg2.data = q_target[7]*180.0/M_PI;
+        elbow_left.publish(msg2);
+        msg2.data = q_target[8]*180.0/M_PI;
+        wrist_left.publish(msg2);
     };
     ros::NodeHandlePtr nh; /// ROS nodehandle
     ros::Publisher motor_command; /// motor command publisher
+    ros::Publisher wrist_left, elbow_left;
+    ros::Subscriber arm_status;
     ros::ServiceClient motor_control_mode, motor_config, sphere_left_axis0_params, sphere_left_axis1_params, sphere_left_axis2_params;
     bool external_robot_state; /// indicates if we get the robot state externally
     vector<short unsigned int> left_arm_motors = {0,1,2,3,4,5,6,7,8};

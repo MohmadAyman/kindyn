@@ -45,7 +45,7 @@ namespace cardsflow {
              * @param local_coordinates
              * @param fixed_to_world
              */
-            ViaPoint(string link_name, Vector3d &local_coordinates, bool fixed_to_world = false) :
+            ViaPoint(string link_name, Vector3d local_coordinates, bool fixed_to_world = false) :
                     link_name(link_name), local_coordinates(local_coordinates),
                     global_coordinates(local_coordinates),fixed_to_world(fixed_to_world) {};
             string link_name; /// the name of the link the viapoint belongs to
