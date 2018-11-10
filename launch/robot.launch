@@ -1,24 +1,59 @@
 <launch>
-    <arg name="model_name" default="msj_platform"/>
-    <param name="robot_description" textfile="$(find robots)/$(arg model_name)/model.urdf" />
-    <rosparam file="$(find robots)/$(arg model_name)/config/controller.yaml" command="load"/>
+    <arg name="robot_name" default="msj_platform"/>
+    <arg name="start_controllers" default="sphere_axis0 sphere_axis1 sphere_axis2"/>
+    <arg name="gazebo" default="false"/>
+    <arg name="paused" default="false"/>
+    <arg name="use_sim_time" default="false"/>
+    <arg name="gui" default="true"/>
+    <arg name="headless" default="false"/>
+    <arg name="debug" default="false"/>
+    <arg name="external_robot_state" default="false"/>
+
+    <param name="robot_name" type="string" value="$(arg robot_name)"  />
+    <param name="robot_description" textfile="$(find robots)/$(arg robot_name)/model.urdf" />
+    <param name="urdf_file_path" type="string" value="$(find robots)/$(arg robot_name)/model.urdf" />
+    <param name="cardsflow_xml" type="string" value="$(find robots)/$(arg robot_name)/cardsflow.xml" />
+    <rosparam file="$(find robots)/$(arg robot_name)/config/controller.yaml" command="load"/>
+    <rosparam file="$(find robots)/$(arg robot_name)/config/endeffectors.yaml" command="load"/>
     <param name="Kp" type="double" value="100"  />
     <param name="Kd" type="double" value="10"  />
     <rosparam param="q_target">[0.0, 0.0, 0.0]</rosparam>
     <param name="min_force" type="double" value="0"  />
-    <param name="max_force" type="double" value="500"  />
+    <param name="max_force" type="double" value="100000"  />
+    <param name="tendon_pgain" type="double" value="100000"  />
+    <param name="tendon_dgain" type="double" value="100"  />
+    <param name="controller" type="int" value="2"  />
+    <param name="external_robot_state" type="bool" value="$(arg external_robot_state)"/>
     <node name="controller_manager"
           pkg="controller_manager"
           type="spawner"
-          args="sphere_axis0 sphere_axis1 sphere_axis2" />
+          args="$(arg start_controllers)" />
+    <!--<node name="controller_manager"-->
+          <!--pkg="controller_manager"-->
+          <!--type="spawner"-->
+          <!--args="hip_joint elbow_left_rot1 elbow_right_rot1 elbow_left_rot0 elbow_right_rot0-->
+          <!--sphere_left_axis0 sphere_left_axis1 sphere_left_axis2 sphere_right_axis0 sphere_right_axis1 sphere_right_axis2-->
+          <!--sphere_head_axis0 sphere_head_axis1 sphere_head_axis2" />-->
 
     <node name="robot_controller"
           pkg="kindyn"
-          type="test_robot"
+          type="$(arg robot_name)"
           respawn="false"
           output="screen"
-          args="$(find robots)/$(arg model_name)/model.urdf $(find robots)/$(arg model_name)/cardsflow.xml"
     />
+
+    <group if="$(arg gazebo)">
+        <include file="$(find gazebo_ros)/launch/empty_world.launch">
+            <arg name="debug" value="$(arg debug)"/>
+            <arg name="gui" value="$(arg gui)"/>
+            <arg name="paused" value="$(arg paused)"/>
+            <arg name="use_sim_time" value="$(arg use_sim_time)"/>
+            <arg name="headless" value="$(arg headless)"/>
+        </include>
+        <node name="robot_spawner" pkg="gazebo_ros" type="spawn_model" respawn="false" output="screen"
+              args="-sdf -file $(find robots)/$(arg robot_name)/model.sdf -model $(arg robot_name)"
+        />
+    </group>
 
 </launch>
         <!--launch-prefix="gdb -ex run"-->

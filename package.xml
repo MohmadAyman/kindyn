@@ -16,9 +16,11 @@
     <depend>common_utilities</depend>
     <depend>controller_interface</depend>
     <depend>roboy_communication_middleware</depend>
-    <depend>eus_qpoases</depend>
+    <depend>roboy_communication_simulation</depend>
 
     <export>
         <controller_interface plugin="${prefix}/CableLengthController_plugin.xml"/>
+        <controller_interface plugin="${prefix}/TorquePositionController_plugin.xml"/>
+        <controller_interface plugin="${prefix}/ForcePositionController_plugin.xml"/>
     </export>
 </package>
