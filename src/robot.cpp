@@ -166,7 +166,7 @@ void Robot::init(string urdf_file_path, string viapoints_file_path, vector<strin
         ROS_INFO("initializing controllers for joint %d %s", joint, joint_names[joint].c_str());
         // connect and register the cardsflow state interface
         hardware_interface::CardsflowStateHandle state_handle(joint_names[joint], joint, &q[joint], &qd[joint],
-                                                              &qdd[joint], &L, &M, &CG
+                                                              &qdd[joint], &L, &M, &CG, &l, &l_target
 
         );
         cardsflow_state_interface.registerHandle(state_handle);

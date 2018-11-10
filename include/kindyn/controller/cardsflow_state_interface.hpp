@@ -51,9 +51,12 @@ namespace hardware_interface {
          * @param L pointer to the L matrix
          * @param M pointer to the mass matrix
          * @param CG pointer to the Coriolis+Gravity vector
+         * @param l pointer to the cable length vector
+         * @param l_target pointer to the target cable length vector
         */
         CardsflowStateHandle(const std::string &name, int joint_index, const double *pos, const double *vel,
-                             const double *acc, const MatrixXd *L, const MatrixXd *M, const VectorXd *CG);
+                             const double *acc, const MatrixXd *L, const MatrixXd *M, const VectorXd *CG,
+                             const VectorXd *l, const VectorXd *l_target);
 
         /**
          * Returns the joint name
@@ -86,6 +89,18 @@ namespace hardware_interface {
         double getAcceleration() const;
 
         /**
+         * Returns the cable length
+         * @return l
+         */
+        VectorXd getl() const;
+
+        /**
+         * Returns the cable length target
+         * @return l_target
+         */
+        VectorXd getl_target() const;
+
+        /**
          * Returns the cable model L matrix
          * @return L
          */
@@ -111,6 +126,7 @@ namespace hardware_interface {
         const double *acc_; /// joint acceleration
         const VectorXd *CG_; /// Coriolis+Gravity vector
         const MatrixXd *L_, *M_; /// L/M matrices
+        const VectorXd *l_, *l_target_; /// the cable lengths and target
     };
 
     class CardsflowStateInterface : public HardwareResourceManager<CardsflowStateHandle> {

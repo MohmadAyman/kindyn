@@ -13,8 +13,8 @@ namespace hardware_interface
 
       */
     CardsflowStateHandle::CardsflowStateHandle(const std::string& name, int joint_index, const double* pos, const double* vel, const double* acc,
-                                               const MatrixXd *L, const MatrixXd *M, const VectorXd *CG)
-            : name_(name), joint_index_(joint_index), pos_(pos), vel_(vel), acc_(acc), L_(L), M_(M), CG_(CG)
+                                               const MatrixXd *L, const MatrixXd *M, const VectorXd *CG, const VectorXd *l, const VectorXd *l_target)
+            : name_(name), joint_index_(joint_index), pos_(pos), vel_(vel), acc_(acc), L_(L), M_(M), CG_(CG), l_(l), l_target_(l_target)
     {
         if (!pos)
         {
@@ -35,6 +35,8 @@ namespace hardware_interface
     double CardsflowStateHandle::getPosition()  const {assert(pos_); return *pos_;}
     double CardsflowStateHandle::getVelocity()  const {assert(vel_); return *vel_;}
     double CardsflowStateHandle::getAcceleration()  const {assert(acc_); return *acc_;}
+    VectorXd CardsflowStateHandle::getl()    const {return *l_;}
+    VectorXd CardsflowStateHandle::getl_target()    const {return *l_target_;}
     MatrixXd CardsflowStateHandle::getL()    const {return *L_;}
     MatrixXd CardsflowStateHandle::getM()    const {return *M_;}
     VectorXd CardsflowStateHandle::getCG()    const {return *CG_;}

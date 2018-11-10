@@ -79,6 +79,11 @@ add_library(ForcePositionController src/controller/forcePositionController.cpp )
 add_dependencies(ForcePositionController roboy_communication_middleware_generate_messages_cpp )
 target_link_libraries(ForcePositionController ${catkin_LIBRARIES} CardsflowHardwareInterface)
 
+# Cable Length Controller Feedback
+add_library(CableLengthControllerFeedback src/controller/cableLengthControllerFeedback.cpp)
+add_dependencies(CableLengthControllerFeedback roboy_communication_middleware_generate_messages_cpp )
+target_link_libraries(CableLengthControllerFeedback ${catkin_LIBRARIES} CardsflowHardwareInterface)
+
 # kindyn library
 add_library(kindyn SHARED
 		src/robot.cpp
@@ -87,7 +92,7 @@ add_library(kindyn SHARED
 		include/kindyn/robot.hpp
 		include/kindyn/cable.hpp)
 target_link_libraries(kindyn ${catkin_LIBRARIES} ${iDynTree_LIBRARIES} ${qpOASES_LIBRARIES} CardsflowHardwareInterface
-		CableLengthController TorquePositionController ForcePositionController)
+		CableLengthController TorquePositionController ForcePositionController CableLengthControllerFeedback)
 
 # testing idyntree
 add_executable( test_idyntree src/test_idyntree.cpp)
