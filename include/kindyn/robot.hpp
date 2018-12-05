@@ -229,6 +229,7 @@ namespace cardsflow {
                 iDynTree::VectorDynSize jointVel;
                 iDynTree::Vector3       gravity;
             }robotstate;
+
         public:
             /**
              * Integrates the robot equation of motions using odeint
@@ -256,7 +257,7 @@ namespace cardsflow {
             vector<VectorXd> ld; /// tendon length changes for each controller
             MatrixXd L, L_t; /// L and -L^T
 
-        private:
+        protected:
             iDynTree::FreeFloatingGeneralizedTorques bias; /// Coriolis+Gravity term
             iDynTree::MatrixDynSize Mass; /// Mass matrix
 

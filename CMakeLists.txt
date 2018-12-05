@@ -20,7 +20,7 @@ endif ()
 find_package(catkin REQUIRED COMPONENTS
 		roscpp
 		rosbag
-		std_msgs geometry_msgs
+		std_msgs geometry_msgs sensor_msgs
 		message_generation
 		common_utilities
 		roboy_middleware_msgs
@@ -36,7 +36,7 @@ find_package(catkin REQUIRED COMPONENTS
 		effort_controllers
 )
 
-catkin_package( CATKIN_DEPENDS roboy_middleware_msgs common_utilities
+catkin_package( CATKIN_DEPENDS roboy_middleware_msgs sensor_msgs common_utilities
         INCLUDE_DIRS include)
 
 # Eigen
@@ -92,7 +92,7 @@ add_library(kindyn SHARED
 		include/kindyn/EigenExtension.hpp
 		include/kindyn/robot.hpp
 		include/kindyn/cable.hpp)
-add_dependencies(kindyn roboy_simulation_msgs_generate_messages_cpp roboy_simulation_msgs_msgs_generate_messages_cpp)
+add_dependencies(kindyn roboy_simulation_msgs_generate_messages_cpp roboy_simulation_msgs_msgs_generate_messages_cpp sensor_msgs_msgs_generate_messages_cpp)
 target_link_libraries(kindyn ${catkin_LIBRARIES} ${iDynTree_LIBRARIES} ${qpOASES_LIBRARIES} CardsflowHardwareInterface
 		CableLengthController TorquePositionController ForcePositionController)
 

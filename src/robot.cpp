@@ -425,23 +425,25 @@ void Robot::update() {
         }
     }
 
-    int i=0;
-    for (auto muscle:cables) {
-        l[i] = 0;
-        int j=0;
-        for (auto vp:muscle.viaPoints) {
-            if (!vp->fixed_to_world) { // move viapoint with link
-                vp->global_coordinates = link_to_world_transform[vp->link_index].block(0, 3, 3, 1) +
-                                         link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
-                                         vp->local_coordinates;
-            }
-            if(j>0){
-                l[i] += (muscle.viaPoints[j]->global_coordinates-muscle.viaPoints[j-1]->global_coordinates).norm();
-            }
-            j++;
-        }
-        i++;
-    }
+    //TODO unnecessary for simulation???
+//
+//    int i=0;
+//    for (auto muscle:cables) {
+//        l[i] = 0;
+//        int j=0;
+//        for (auto vp:muscle.viaPoints) {
+//            if (!vp->fixed_to_world) { // move viapoint with link
+//                vp->global_coordinates = link_to_world_transform[vp->link_index].block(0, 3, 3, 1) +
+//                                         link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
+//                                         vp->local_coordinates;
+//            }
+//            if(j>0){
+//                l[i] += (muscle.viaPoints[j]->global_coordinates-muscle.viaPoints[j-1]->global_coordinates).norm();
+//            }
+//            j++;
+//        }
+//        i++;
+//    }
 //    ROS_INFO_THROTTLE(1,"model update takes %f seconds", (ros::Time::now()-t0).toSec());
 //    t0 = ros::Time::now();
     update_V();
@@ -474,7 +476,7 @@ void Robot::update() {
         }
     }
 
-    ROS_INFO_STREAM_THROTTLE(5, "q_target " << q_target.transpose().format(fmt));
+    ROS_INFO_STREAM_THROTTLE(1, "q_target " << q_target.transpose().format(fmt));
     ROS_INFO_STREAM_THROTTLE(5, "qdd " << qdd.transpose().format(fmt));
     ROS_INFO_STREAM_THROTTLE(5, "qd " << qd.transpose().format(fmt));
     ROS_INFO_STREAM_THROTTLE(5, "q " << q.transpose().format(fmt));
@@ -611,6 +613,7 @@ void Robot::forwardKinematics(double dt) {
 //        ROS_INFO("%s control type %d", joint_names[j].c_str(), controller_type[j]);
         }
         for (int i = 0; i < number_of_cables; i++) {
+//            ROS_INFO_STREAM("Ld: " << Ld);
             boost::numeric::odeint::integrate(
                     [this, i](const state_type &x, state_type &dxdt, double t) {
                         dxdt[1] = 0;

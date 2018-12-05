@@ -1,6 +1,11 @@
 #include "kindyn/robot.hpp"
 #include <thread>
 #include <roboy_middleware_msgs/MotorCommand.h>
+#include <roboy_simulation_msgs/Tendon.h>
+#include <common_utilities/CommonDefinitions.h>
+#include "sensor_msgs/JointState.h"
+#include "../../../../../devel/include/roboy_middleware_msgs/MotorStatus.h"
+
 #define SPINDLERADIUS 0.0045
 #define FS5103R_MAX_SPEED (2.0*M_PI/0.9) // radian per second
 
@@ -11,6 +16,23 @@
 using namespace std;
 
 class MsjPlatform: public cardsflow::kindyn::Robot{
+private:
+    ros::Subscriber gazebo_robot_state_sub, tendon_states_sub, motor_status_sub;
+    void JointStatesCallback(const sensor_msgs::JointStateConstPtr &msg) {
+        for(int i=0; i<joint_names.size(); i++) {
+            auto joint = joint_names[0];
+            auto idx =  distance(msg->name.begin(), find(msg->name.begin(), msg->name.end(), joint));
+            q[i] = msg->position[idx];
+            qd[i] = msg->velocity[idx];
+        }
+    }
+
+    void TendonStatesCallback(const roboy_simulation_msgs::TendonConstPtr &msg) {
+        for (int i=0; i<msg->deltal.size(); i++) {
+            l[i] = msg->deltal[i];
+        }
+    }
+
 public:
     /**
      * Constructor
@@ -32,6 +54,12 @@ public:
         init(urdf,cardsflow_xml,joint_names);
         // if we do not get the robot state externally, we use the forwardKinematics function to integrate the robot state
         nh->getParam("external_robot_state", external_robot_state);
+
+        if (external_robot_state) {
+            gazebo_robot_state_sub = nh->subscribe("/joint_states", 1, &MsjPlatform::JointStatesCallback, this);
+            tendon_states_sub = nh->subscribe("/tendon_states", 1, &MsjPlatform::TendonStatesCallback, this);
+        }
+
     };
 
     /**
@@ -40,8 +68,30 @@ public:
      */
     void read(){
         update();
-        if(!external_robot_state)
-            forwardKinematics(0.00001);
+        auto dt = 0.00001;
+//        ROS_INFO_STREAM_THROTTLE(1, Ld);
+        if(!external_robot_state) // else q, qd, l are filled by gazebo_robot_state_sub & tendon_states_sub
+            forwardKinematics(dt);
+        else {
+            for(int i = 0; i<endeffectors.size();i++) {
+                int dof_offset = endeffector_dof_offset[i];
+                Ld.setZero();
+                for (int j = dof_offset; j < endeffector_number_of_dofs[i] + dof_offset; j++) {
+                    Ld -= ld[j];
+                }
+            }
+
+
+            for (int i = 0; i < number_of_cables; i++) {
+//            ROS_INFO_STREAM("Ld: " << Ld);
+                boost::numeric::odeint::integrate(
+                        [this, i](const state_type &x, state_type &dxdt, double t) {
+                            dxdt[1] = 0;
+                            dxdt[0] = Ld[i];
+                        }, motor_state[i], integration_time, integration_time + dt, dt);
+                l_target[i] = motor_state[i][0];
+            }
+        }
     };
 
     /**
@@ -66,11 +116,14 @@ public:
      */
     void write(){
         roboy_middleware_msgs::MotorCommand msg;
-        msg.id = 5;
+
+        // TODO fpga ID for gazebo
+        msg.id = 0;
         for (int i = 0; i < number_of_cables; i++) {
+//            ROS_INFO_STREAM_THROTTLE(1, "i: " << i << "\tl: " << l[i] << "\tld: " << ld[i]);
             msg.motors.push_back(i);
-            msg.set_points.push_back(
-                    512 + (l[i] / (2.0 * M_PI * 0.016 * (301.0 / 1024.0 / 360.0)))); //
+            msg.set_points.push_back(myoMuscleEncoderTicksPerMeter(l_target[i]));
+                    //512 + (l_target[i] / (2.0 * M_PI * 0.016 * (301.0 / 1024.0 / 360.0)))); //
         }
         motor_command.publish(msg);
     };

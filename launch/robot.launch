@@ -40,6 +40,7 @@
           output="screen"
     />
 
+
     <group if="$(arg gazebo)">
         <include file="$(find gazebo_ros)/launch/empty_world.launch">
             <arg name="debug" value="$(arg debug)"/>
