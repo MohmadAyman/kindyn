@@ -4,14 +4,11 @@
 #include <roboy_simulation_msgs/Tendon.h>
 #include <common_utilities/CommonDefinitions.h>
 #include "sensor_msgs/JointState.h"
-#include "../../../../../devel/include/roboy_middleware_msgs/MotorStatus.h"
 
-#define SPINDLERADIUS 0.0045
-#define FS5103R_MAX_SPEED (2.0*M_PI/0.9) // radian per second
-
-#define FS5103R_FULL_SPEED_BACKWARDS 400.0
-#define FS5103R_STOP 375.0
-#define FS5103R_FULL_SPEED_FORWARDS 350.0
+#define NUMBER_OF_MOTORS 8
+#define SPINDLERADIUS 0.00575
+#define msjMeterPerEncoderTick(encoderTicks) (((encoderTicks)/(4096.0)*(2.0*M_PI*SPINDLERADIUS)))
+#define msjEncoderTicksPerMeter(meter) ((meter)*(4096.0)/(2.0*M_PI*SPINDLERADIUS))
 
 using namespace std;
 
@@ -59,7 +56,9 @@ public:
             gazebo_robot_state_sub = nh->subscribe("/joint_states", 1, &MsjPlatform::JointStatesCallback, this);
             tendon_states_sub = nh->subscribe("/tendon_states", 1, &MsjPlatform::TendonStatesCallback, this);
         }
-
+        update();
+        for(int i=0;i<NUMBER_OF_MOTORS;i++)
+            l_offset[i] = l[i];
     };
 
     /**
@@ -95,41 +94,25 @@ public:
     };
 
     /**
-     * Converts tendon length chages from the cable model to pwm commands of the real robot
-     * @param meterPerSecond tendon length change
-     * @return pwm
-     */
-    int meterPerSecondToServoSpeed(double meterPerSecond){
-        double radianPerSecond = meterPerSecond/(2.0 * M_PI * SPINDLERADIUS);
-        double pwm = radianPerSecond;
-        if(pwm<=-1){
-            return FS5103R_FULL_SPEED_BACKWARDS;
-        }else if(pwm>-1 && pwm<1){
-            return -pwm*(FS5103R_FULL_SPEED_BACKWARDS-FS5103R_STOP)+FS5103R_STOP;
-        }else{
-            return FS5103R_FULL_SPEED_FORWARDS;
-        }
-    }
-
-    /**
      * Sends motor commands to the real robot
      */
     void write(){
         roboy_middleware_msgs::MotorCommand msg;
-
-        // TODO fpga ID for gazebo
         msg.id = 0;
-        for (int i = 0; i < number_of_cables; i++) {
-//            ROS_INFO_STREAM_THROTTLE(1, "i: " << i << "\tl: " << l[i] << "\tld: " << ld[i]);
+        stringstream str;
+        for (int i = 0; i < NUMBER_OF_MOTORS; i++) {
             msg.motors.push_back(i);
-            msg.set_points.push_back(myoMuscleEncoderTicksPerMeter(l_target[i]));
-                    //512 + (l_target[i] / (2.0 * M_PI * 0.016 * (301.0 / 1024.0 / 360.0)))); //
+            double l_change = l[i]-l_offset[i];
+            msg.set_points.push_back(-msjEncoderTicksPerMeter(l_change)); //
+            str << l_change << "\t";
         }
+        ROS_INFO_STREAM_THROTTLE(1,str.str());
         motor_command.publish(msg);
     };
     bool external_robot_state; /// indicates if we get the robot state externally
     ros::NodeHandlePtr nh; /// ROS nodehandle
     ros::Publisher motor_command; /// motor command publisher
+    double l_offset[NUMBER_OF_MOTORS];
 };
 
 /**
