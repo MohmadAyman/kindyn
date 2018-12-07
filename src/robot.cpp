@@ -128,6 +128,8 @@ void Robot::init(string urdf_file_path, string viapoints_file_path, vector<strin
     l_target.resize(number_of_cables);
     Ld.resize(number_of_cables);
     Ld.setZero();
+    Ld_curr.resize(number_of_cables);
+    Ld_curr.setZero();
     ld.resize(number_of_dofs);
     l.setZero();
     l_int.setZero();
@@ -427,25 +429,23 @@ void Robot::update() {
         }
     }
 
-    //TODO unnecessary for simulation???
-//
-//    int i=0;
-//    for (auto muscle:cables) {
-//        l[i] = 0;
-//        int j=0;
-//        for (auto vp:muscle.viaPoints) {
-//            if (!vp->fixed_to_world) { // move viapoint with link
-//                vp->global_coordinates = link_to_world_transform[vp->link_index].block(0, 3, 3, 1) +
-//                                         link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
-//                                         vp->local_coordinates;
-//            }
-//            if(j>0){
-//                l[i] += (muscle.viaPoints[j]->global_coordinates-muscle.viaPoints[j-1]->global_coordinates).norm();
-//            }
-//            j++;
-//        }
-//        i++;
-//    }
+    int i=0;
+    for (auto muscle:cables) {
+        l[i] = 0;
+        int j=0;
+        for (auto vp:muscle.viaPoints) {
+            if (!vp->fixed_to_world) { // move viapoint with link
+                vp->global_coordinates = link_to_world_transform[vp->link_index].block(0, 3, 3, 1) +
+                                         link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
+                                         vp->local_coordinates;
+            }
+            if(j>0){
+                l[i] += (muscle.viaPoints[j]->global_coordinates-muscle.viaPoints[j-1]->global_coordinates).norm();
+            }
+            j++;
+        }
+        i++;
+    }
 //    ROS_INFO_THROTTLE(1,"model update takes %f seconds", (ros::Time::now()-t0).toSec());
 //    t0 = ros::Time::now();
     update_V();
@@ -478,15 +478,16 @@ void Robot::update() {
         }
     }
 
-    ROS_INFO_STREAM_THROTTLE(1, "q_target " << q_target.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "qdd " << qdd.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "qd " << qd.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "q " << q.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "l " << l.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "ld " << Ld.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "torques " << torques.transpose().format(fmt));
-    ROS_INFO_STREAM_THROTTLE(5, "cable_forces " << cable_forces.transpose().format(fmt));
-
+//    ROS_INFO_STREAM_THROTTLE(1, "q_target " << q_target.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(5, "qdd " << qdd.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(5, "qd " << qd.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(5, "q " << q.transpose().format(fmt));
+    ROS_INFO_STREAM_THROTTLE(1, "l " << l.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(1, "l_target " << l_target.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(1, "Ld " << Ld.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(5, "torques " << torques.transpose().format(fmt));
+//    ROS_INFO_STREAM_THROTTLE(5, "cable_forces " << cable_forces.transpose().format(fmt));
+//
     // for the cable force controller with do a centralized update
     if(force_position_controller_active){
         cable_forces = resolve_function(L_t, torques, f_min, f_max);
