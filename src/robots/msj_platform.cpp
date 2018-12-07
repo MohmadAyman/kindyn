@@ -74,7 +74,7 @@ public:
      */
     void read(){
         update();
-        auto dt = 0.00001;
+        auto dt = 0.00005;
 //        ROS_INFO_STREAM_THROTTLE(1, Ld);
         if(!external_robot_state) // else q, qd, l are filled by gazebo_robot_state_sub & tendon_states_sub
             forwardKinematics(dt);
