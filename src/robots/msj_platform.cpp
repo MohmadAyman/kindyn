@@ -16,14 +16,14 @@
 using namespace std;
 
 class MsjPlatform: public cardsflow::kindyn::Robot{
-private:
+
+    private:
     mutex mux;
     ros::Subscriber gazebo_robot_state_sub, tendon_states_sub, motor_status_sub;
     ros::Publisher cardsflow_status_pub;
     void JointStatesCallback(const sensor_msgs::JointStateConstPtr &msg) {
-        lock_guard<mutex> lock(mux);
         for(int i=0; i<joint_names.size(); i++) {
-            auto joint = joint_names[0];
+            auto joint = joint_names[i];
             auto idx =  distance(msg->name.begin(), find(msg->name.begin(), msg->name.end(), joint));
             q[i] = msg->position[idx];
             qd[i] = msg->velocity[idx];
@@ -32,6 +32,7 @@ private:
 
     void TendonStatesCallback(const roboy_simulation_msgs::TendonConstPtr &msg) {
         for (int i=0; i<msg->ld.size(); i++) {
+            l[i] = msg->l[i];
             Ld_curr[i] = msg->ld[i];
         }
     }
@@ -61,8 +62,9 @@ public:
 
         if (external_robot_state) {
             gazebo_robot_state_sub = nh->subscribe("/joint_states", 1, &MsjPlatform::JointStatesCallback, this);
-            tendon_states_sub = nh->subscribe("/tendon_states", 1, &MsjPlatform::TendonStatesCallback, this);
+
         }
+        tendon_states_sub = nh->subscribe("/tendon_states", 1, &MsjPlatform::TendonStatesCallback, this);
         update();
         for(int i=0;i<NUMBER_OF_MOTORS;i++)
             l_offset[i] = l[i];
@@ -73,6 +75,7 @@ public:
      * with a small step length
      */
     void read(){
+
         update();
         auto dt = 0.00005;
 //        ROS_INFO_STREAM_THROTTLE(1, Ld);
@@ -86,17 +89,6 @@ public:
                     Ld -= ld[j];
                 }
             }
-
-
-            for (int i = 0; i < number_of_cables; i++) {
-//            ROS_INFO_STREAM("Ld: " << Ld);
-                boost::numeric::odeint::integrate(
-                        [this, i](const state_type &x, state_type &dxdt, double t) {
-                            dxdt[1] = 0;
-                            dxdt[0] = Ld[i];
-                        }, motor_state[i], integration_time, integration_time + dt, dt);
-                l_target[i] = l[i] + motor_state[i][0];
-            }
         }
     };
 
@@ -107,16 +99,15 @@ public:
         roboy_middleware_msgs::MotorCommand msg;
         roboy_simulation_msgs::CardsflowStatus cf_msg;
         msg.id = 0;
-        stringstream str;
         for (int i = 0; i < NUMBER_OF_MOTORS; i++) {
             msg.motors.push_back(i);
-            double l_change = l[i]+l_offset[i];
+            msg.set_points.push_back(myoMuscleEncoderTicksPerMeter(Ld[i]));
+
             cf_msg.current.push_back(Ld_curr[i]);
             cf_msg.target.push_back(Ld[i]);
-            msg.set_points.push_back(myoMuscleEncoderTicksPerMeter(Ld[i]));
-            ROS_INFO_STREAM_THROTTLE(1, "l_target " << l_target.transpose().format(fmt));
-            str << l_change << "\t";
+
         }
+        ROS_INFO_STREAM_THROTTLE(1, "Ld_target " << Ld.transpose().format(fmt));
 //        ROS_INFO_STREAM_THROTTLE(1,str.str());
         motor_command.publish(msg);
         cardsflow_status_pub.publish(cf_msg);
