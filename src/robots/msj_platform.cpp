@@ -22,11 +22,12 @@ class MsjPlatform: public cardsflow::kindyn::Robot{
     ros::Subscriber gazebo_robot_state_sub, tendon_states_sub, motor_status_sub;
     ros::Publisher cardsflow_status_pub;
     void JointStatesCallback(const sensor_msgs::JointStateConstPtr &msg) {
-        for(int i=0; i<joint_names.size(); i++) {
-            auto joint = joint_names[i];
-            auto idx =  distance(msg->name.begin(), find(msg->name.begin(), msg->name.end(), joint));
-            q[i] = msg->position[idx];
-            qd[i] = msg->velocity[idx];
+        for(int i=0; i<msg->name.size(); i++) {
+            auto idx =  distance(joint_names.begin(), find(joint_names.begin(), joint_names.end(), msg->name[i]));
+            if(idx == -1)
+                continue;
+            q[idx] = msg->position[i];
+            qd[idx] = msg->velocity[i];
         }
     }
 

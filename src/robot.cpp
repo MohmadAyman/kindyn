@@ -432,23 +432,23 @@ void Robot::update() {
     }
 
 //    TODO external_robot_state condition
-//    int i=0;
-//    for (auto muscle:cables) {
-//        l[i] = 0;
-//        int j=0;
-//        for (auto vp:muscle.viaPoints) {
-//            if (!vp->fixed_to_world) { // move viapoint with link
-//                vp->global_coordinates = link_to_world_transform[vp->link_index].block(0, 3, 3, 1) +
-//                                         link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
-//                                         vp->local_coordinates;
-//            }
+    int i=0;
+    for (auto muscle:cables) {
+        l[i] = 0;
+        int j=0;
+        for (auto vp:muscle.viaPoints) {
+            if (!vp->fixed_to_world) { // move viapoint with link
+                vp->global_coordinates = link_to_world_transform[vp->link_index].block(0, 3, 3, 1) +
+                                         link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
+                                         vp->local_coordinates;
+            }
 //            if(j>0){
 //                l[i] += (muscle.viaPoints[j]->global_coordinates-muscle.viaPoints[j-1]->global_coordinates).norm();
 //            }
-//            j++;
-//        }
-//        i++;
-//    }
+            j++;
+        }
+        i++;
+    }
 //    ROS_INFO_THROTTLE(1,"model update takes %f seconds", (ros::Time::now()-t0).toSec());
 //    t0 = ros::Time::now();
     update_V();
@@ -495,7 +495,7 @@ void Robot::update() {
         cable_forces = resolve_function(L_t, torques, f_min, f_max);
     }
 
-    if ((1.0 / (ros::Time::now() - last_visualization).toSec()) < 30) {
+    if ((1.0 / (ros::Time::now() - last_visualization).toSec()) < 500) {
         { // tendon state publisher
             roboy_simulation_msgs::Tendon msg;
             for (int i = 0; i < number_of_cables; i++) {
@@ -564,6 +564,8 @@ void Robot::update() {
                 msg.origin.push_back(convertEigenToGeometry(pose.topRightCorner(3, 1)));
                 msg.axis.push_back(convertEigenToGeometry(axis));
                 msg.torque.push_back(torques[i - 1]);
+                msg.q.push_back(q[i-1]);
+                msg.qd.push_back(qd[i-1]);
             }
             joint_state_pub.publish(msg);
         }

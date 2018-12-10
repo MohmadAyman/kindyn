@@ -210,7 +210,7 @@ namespace cardsflow {
             ros::ServiceServer ik_srv, fk_srv;
             map<string,boost::shared_ptr<actionlib::SimpleActionServer<roboy_control_msgs::MoveEndEffectorAction>>> moveEndEffector_as;
 
-
+        protected:
             iDynTree::KinDynComputations kinDynComp, kinDynCompTarget; /// the full robot model
             map<string,iDynTree::KinDynComputations> ik_models; /// the robot models for each endeffector
             map<string,iDynTree::InverseKinematics> ik; /// the ik for each endeffector
