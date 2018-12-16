@@ -285,6 +285,9 @@ namespace cardsflow {
             hardware_interface::EffortJointInterface joint_command_interface; /// ros control joint command interface
             hardware_interface::CardsflowStateInterface cardsflow_state_interface; /// cardsflow state interface
             hardware_interface::CardsflowCommandInterface cardsflow_command_interface; /// cardsflow command interface
+
+            bool external_robot_state; /// indicates if we get the robot state externally
+
         };
     }
 }

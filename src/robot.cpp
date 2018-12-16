@@ -431,7 +431,6 @@ void Robot::update() {
         }
     }
 
-//    TODO external_robot_state condition
     int i=0;
     for (auto muscle:cables) {
         l[i] = 0;
@@ -442,10 +441,13 @@ void Robot::update() {
                                          link_to_world_transform[vp->link_index].block(0, 0, 3, 3) *
                                          vp->local_coordinates;
             }
-//            if(j>0){
-//                l[i] += (muscle.viaPoints[j]->global_coordinates-muscle.viaPoints[j-1]->global_coordinates).norm();
-//            }
-            j++;
+            if (!external_robot_state) {
+                if (j > 0) {
+                    l[i] += (muscle.viaPoints[j]->global_coordinates -
+                             muscle.viaPoints[j - 1]->global_coordinates).norm();
+                }
+                j++;
+            }
         }
         i++;
     }

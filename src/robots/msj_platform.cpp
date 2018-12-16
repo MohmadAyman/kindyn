@@ -63,9 +63,9 @@ public:
 
         if (external_robot_state) {
             gazebo_robot_state_sub = nh->subscribe("/joint_states", 1, &MsjPlatform::JointStatesCallback, this);
-
+            tendon_states_sub = nh->subscribe("/tendon_states", 1, &MsjPlatform::TendonStatesCallback, this);
         }
-        tendon_states_sub = nh->subscribe("/tendon_states", 1, &MsjPlatform::TendonStatesCallback, this);
+
         update();
         for(int i=0;i<NUMBER_OF_MOTORS;i++)
             l_offset[i] = l[i];
@@ -113,7 +113,6 @@ public:
         motor_command.publish(msg);
         cardsflow_status_pub.publish(cf_msg);
     };
-    bool external_robot_state; /// indicates if we get the robot state externally
     ros::NodeHandlePtr nh; /// ROS nodehandle
     ros::Publisher motor_command; /// motor command publisher
     double l_offset[NUMBER_OF_MOTORS];
