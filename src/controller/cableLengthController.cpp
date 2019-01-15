@@ -65,7 +65,14 @@ public:
         while(controller_state.getNumSubscribers()==0) // we wait until the controller state is available
             r.sleep();
         joint = hw->getHandle(joint_name); // throws on failure
-        joint_index = joint.getJointIndex();
+        try {
+            joint_index = joint.getJointIndex();
+        }
+        catch (const std::exception& e) {
+            ROS_WARN_STREAM("Cable length controller could not get joint index for " << joint_name);
+        }
+
+
         last_update = ros::Time::now();
         joint_command = nh.subscribe((joint_name+"/target").c_str(),1,&CableLengthController::JointPositionCommand, this);
         controller_parameter_srv = nh.advertiseService((joint_name+"/params").c_str(),& CableLengthController::setControllerParameters, this);
