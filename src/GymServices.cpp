@@ -42,12 +42,11 @@ bool GymServices::gymStepHandler(roboy_simulation_msgs::GymStep::Request &req,
         }
 
         training_robot->Ld[0] = vel;  //Commanding cable velocity for simulation
-        last_tendon_length = tendon_length;
 
         training_robot->forwardKinematics(req.step_size);
+        last_tendon_length = this->training_robot->l;
     }
     else{
-
         training_robot->l = tendon_length;
         training_robot->write();
     }
