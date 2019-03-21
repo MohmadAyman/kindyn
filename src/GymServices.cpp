@@ -3,6 +3,7 @@
 GymServices::GymServices(cardsflow::kindyn::Robot* robot, int id, bool respect_limits){
     ros::NodeHandlePtr nh(new ros::NodeHandle);
     boost::shared_ptr <ros::AsyncSpinner> spinner;
+
     spinner.reset(new ros::AsyncSpinner(0));
     spinner->start();
     ROS_INFO("Gym functions");
@@ -21,17 +22,17 @@ GymServices::GymServices(cardsflow::kindyn::Robot* robot, int id, bool respect_l
 bool GymServices::gymStepHandler(roboy_simulation_msgs::GymStep::Request &req,
                                   roboy_simulation_msgs::GymStep::Response &res){
     training_robot->update();
+    Map<VectorXd> tendon_velocity(req.set_points.data()  , training_robot->number_of_cables);
 
-    Map<VectorXd> action(req.set_points.data()  , training_robot->number_of_cables);
-    training_robot->Ld[0]= action;  //Commanding cable velocity for simulation
-    //training_robot->l[i] = action;     //Commanding cable length for hardware
+    training_robot->Ld[0] = tendon_velocity;  //Commanding cable velocity to simulation
 
-    if(!training_robot->isExternalRobotExist())
-        training_robot->forwardKinematics(req.step_size);
+    training_robot->forwardKinematics(req.step_size);
+
+    if(training_robot->isExternalRobotExist())
+        training_robot->write();             //Publish the resulting tendon lengths from forwardKinematics to motors.
 
     ROS_INFO_STREAM_THROTTLE(5, "Ld = " << training_robot->Ld[0].format(fmt));
 
-    training_robot->write();
 
     if(training_with_limits){
         res.feasible = isFeasible(training_robot->getBallJointLimitVector(0), training_robot->getBallJointLimitVector(1), training_robot->q[0], training_robot->q[1]);
@@ -59,32 +60,33 @@ bool GymServices::gymReadStateHandler(roboy_simulation_msgs::GymStep::Request &r
 
 bool GymServices::gymResetHandler(roboy_simulation_msgs::GymReset::Request &req,
                                    roboy_simulation_msgs::GymReset::Response &res){
-    VectorXd jointAngle, jointVel, zeroTendonLength, zeroTendonVels;
+    if(!training_robot->isExternalRobotExist()){
+        VectorXd jointAngle, jointVel, zeroTendonLength, zeroTendonVels;
 
-    training_robot->setIntegrationTime(0.0);
+        training_robot->setIntegrationTime(0.0);
 
-    jointAngle.resize(training_robot->number_of_dofs);
-    jointVel.resize(training_robot->number_of_dofs);
-    zeroTendonLength.resize(training_robot->number_of_cables);
-    zeroTendonVels.resize(training_robot->number_of_cables);
+        jointAngle.resize(training_robot->number_of_dofs);
+        jointVel.resize(training_robot->number_of_dofs);
+        zeroTendonLength.resize(training_robot->number_of_cables);
+        zeroTendonVels.resize(training_robot->number_of_cables);
 
-    zeroTendonLength.setZero();
-    zeroTendonVels.setZero();
+        zeroTendonLength.setZero();
+        zeroTendonVels.setZero();
 
-    jointAngle.setZero();
-    jointVel.setZero();
+        jointAngle.setZero();
+        jointVel.setZero();
 
-    setJointAngleAndVelocity(jointAngle, jointVel);
+        setJointAngleAndVelocity(jointAngle, jointVel);
 
-    training_robot->setMotorCableLengths(zeroTendonLength);
-    training_robot->setMotorCableVelocities(zeroTendonVels);
+        training_robot->setMotorCableLengths(zeroTendonLength);
+        training_robot->setMotorCableVelocities(zeroTendonVels);
 
 
-    for(int i=0; i< training_robot->number_of_dofs; i++ ){
-        res.q.push_back(training_robot->q[i]);
-        res.qdot.push_back(training_robot->qd[i]);
+        for(int i=0; i< training_robot->number_of_dofs; i++ ){
+            res.q.push_back(training_robot->q[i]);
+            res.qdot.push_back(training_robot->qd[i]);
+        }
     }
-
     return true;
 }
 

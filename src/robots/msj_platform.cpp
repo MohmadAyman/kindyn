@@ -5,6 +5,7 @@
 #include <roboy_simulation_msgs/GymStep.h>
 #include <roboy_simulation_msgs/GymReset.h>
 #include <roboy_simulation_msgs/GymGoal.h>
+
 #include <common_utilities/CommonDefinitions.h>
 #include <stdlib.h> /* atoi*/
 #include <limits>
@@ -14,6 +15,7 @@
 #define SPINDLERADIUS 0.00575
 #define msjMeterPerEncoderTick(encoderTicks) (((encoderTicks)/(4096.0)*(2.0*M_PI*SPINDLERADIUS)))
 #define msjEncoderTicksPerMeter(meter) ((meter)*(4096.0)/(2.0*M_PI*SPINDLERADIUS))
+#define LIMIT_SCALE 0.5
 
 using namespace std;
 using namespace Eigen;
@@ -56,7 +58,6 @@ public:
 
 
     };
-
     /**
      * Read joint limits of the robots which have the shoulder as part of their kinematics.
      *
@@ -71,8 +72,13 @@ public:
             float qx,qy;
             int i =0;
             while(fscanf(file,"%f %f\n",&qx,&qy) == 2){
-                limits[0].push_back(qx);
-                limits[1].push_back(qy);
+                if(external_robot_state) {
+                    limits[0].push_back(qx * LIMIT_SCALE);        // Smaller limits for hardware live demo
+                    limits[1].push_back(qy * LIMIT_SCALE);
+                } else{
+                    limits[0].push_back(qx);
+                    limits[1].push_back(qy);
+                }
                 i++;
             }
             printf("read %d joint limit values\n", i);
@@ -109,7 +115,7 @@ public:
         stringstream str;
         for (int i = 0; i < NUMBER_OF_MOTORS; i++) {
             msg.motors.push_back(i);
-            double l_change = l[i]-l_initial[i];
+            double l_change = l_initial[i]-l[i];
             msg.set_points.push_back(-msjEncoderTicksPerMeter(l_change)); //
             str << l_change << "\t";
         }
@@ -139,6 +145,7 @@ public:
     bool isExternalRobotExist(){
         return external_robot_state;
     }
+
 
 private:
 
